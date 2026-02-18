@@ -5,7 +5,11 @@ Testing Real Time Tracking and Visibility (RTV) for RTV transports currently req
 
 The ACC RTV Tour Tester is a single-page web application that consolidates the entire RTV testing workflow into a guided, four-step process. Users paste a transport XML, the app validates it and extracts route data, assists with vehicle selection, provides an interactive map for tour construction, and submits the tour to the RTV Mock API — all from one interface.
 
+## Prerequisites
 
+- **Podman** (or Docker) installed
+- **PowerShell** (to run `Start-RTVTourBuilder.ps1`)
+- Network access to the RTV Mock API (e.g. VPN if required)
 
 ## Quick Start
 
