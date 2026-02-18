@@ -1,0 +1,12 @@
+{
+  "name": "rtv-tour-builder",
+  "version": "1.0.0",
+  "description": "RTV Tour Builder — guided RTV testing workflow",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+Documentation
+RTV-Tour-Builder-PRD.md
+*.md
+.DS_Store
+Thumbs.db

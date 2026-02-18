@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACC RTV Tour Tester</title>
+
+    <!-- Leaflet 1.9.4 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+    /* ============================================================
+       CSS — ACC RTV Tour Tester
+       ============================================================ */
+
+    /* --- Reset & Base --- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg:          #0f1117;
+        --surface:     #1a1d27;
+        --surface-alt: #232734;
+        --border:      #2e3346;
+        --text:        #e4e6f0;
+        --text-dim:    #8b8fa6;
+        --accent:      #4f8cff;
+        --success:     #51cf66;
+        --error:       #ff6b6b;
+        --warning:     #ffd43b;
+        --stop1:       #ff6b6b;
+        --stop2:       #4f8cff;
+        --stop3:       #ffd43b;
+        --stop4:       #ff922b;
+        --stop5:       #22b8cf;
+        --stop6:       #51cf66;
+        --font-body:   'DM Sans', sans-serif;
+        --font-mono:   'JetBrains Mono', monospace;
+    }
+
+    html, body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 14px;
+        line-height: 1.5;
+        overflow: hidden;
+    }
+
+    /* --- Layout Shell --- */
+    #app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+
+    /* --- Top Navigation --- */
+    nav.topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        height: 52px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .app-title {
+        font-weight: 700;
+        font-size: 16px;
+        color: var(--accent);
+        letter-spacing: -0.3px;
+    }
+    .transport-badge {
+        font-size: 12px;
+        color: var(--text-dim);
+        background: var(--surface-alt);
+        padding: 3px 10px;
+        border-radius: 4px;
+        display: none;
+    }
+    .transport-badge.visible { display: inline-block; }
+
+    .topbar-tabs {
+        display: flex;
+        gap: 4px;
+    }
+    .topbar-tab {
+        padding: 6px 18px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: var(--text-dim);
+        transition: background 0.15s, color 0.15s;
+    }
+    .topbar-tab:hover { background: var(--surface-alt); color: var(--text); }
+    .topbar-tab.active { background: var(--accent); color: #fff; }
+
+    .topbar-right {
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--text-dim);
+    }
+
+    /* --- Main Content Area --- */
+    .main-content {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+    }
+    .view { display: none; height: 100%; }
+    .view.active { display: flex; flex-direction: column; }
+
+    /* --- Step Indicator --- */
+    .step-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 16px 32px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .step-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 18px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-dim);
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        cursor: default;
+        transition: all 0.2s;
+    }
+    .step-pill .step-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--border);
+        color: var(--text-dim);
+    }
+    .step-pill.active { border-color: var(--accent); color: var(--text); }
+    .step-pill.active .step-num { background: var(--accent); color: #fff; }
+    .step-pill.completed { border-color: var(--success); color: var(--success); cursor: pointer; }
+    .step-pill.completed .step-num { background: var(--success); color: #fff; }
+    .step-connector { width: 32px; height: 2px; background: var(--border); border-radius: 1px; }
+
+    /* --- Instructions View --- */
+    .instructions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin: 24px 0;
+    }
+    .instr-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        position: relative;
+        transition: border-color 0.2s;
+    }
+    .instr-card:hover { border-color: var(--accent); }
+    .instr-card .instr-step-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        font-size: 13px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 12px;
+    }
+    .instr-card .instr-step-num.c1 { background: var(--accent); }
+    .instr-card .instr-step-num.c2 { background: #a855f7; }
+    .instr-card .instr-step-num.c3 { background: var(--warning); color: #1a1d27; }
+    .instr-card .instr-step-num.c4 { background: var(--success); }
+    .instr-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .instr-card ul { list-style: none; padding: 0; margin: 0; }
+    .instr-card li {
+        font-size: 13px;
+        color: var(--text-dim);
+        padding: 3px 0;
+        padding-left: 18px;
+        position: relative;
+    }
+    .instr-card li::before {
+        content: '›';
+        position: absolute;
+        left: 4px;
+        color: var(--text-dim);
+        font-weight: 600;
+    }
+    .instr-card .instr-tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    .instr-tag.tag-blue { background: rgba(79,140,255,0.15); color: var(--accent); }
+    .instr-tag.tag-purple { background: rgba(168,85,247,0.15); color: #a855f7; }
+    .instr-tag.tag-yellow { background: rgba(255,212,59,0.15); color: var(--warning); }
+    .instr-tag.tag-green { background: rgba(81,207,102,0.15); color: var(--success); }
+
+    .prereq-bar {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+    .prereq-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        color: var(--text-dim);
+    }
+    .prereq-item .prereq-icon { font-size: 16px; }
+
+    .flow-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        color: var(--border);
+        padding: 0 4px;
+    }
+    .instr-flow {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+        margin: 24px 0;
+    }
+    .instr-flow .instr-flow-step {
+        flex: 1;
+        text-align: center;
+        padding: 14px 8px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-dim);
+    }
+    .instr-flow .instr-flow-step span {
+        display: block;
+        font-size: 20px;
+        margin-bottom: 4px;
+    }
+
+    /* --- Step Content Containers --- */
+    .step-content {
+        display: none;
+        flex: 1;
+        overflow-y: auto;
+        padding: 28px 32px;
+    }
+    .step-content.active { display: block; }
+    .step-content h2 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+    .step-content .step-desc {
+        color: var(--text-dim);
+        font-size: 13px;
+        margin-bottom: 24px;
+    }
+
+    /* --- Step 1: Transport Summary Card --- */
+    .transport-summary {
+        display: none;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+    }
+    .transport-summary.visible { display: block; }
+    .transport-summary .ts-row {
+        display: flex;
+        gap: 32px;
+        flex-wrap: wrap;
+    }
+    .transport-summary .ts-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .transport-summary .ts-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: var(--text-dim);
+    }
+    .transport-summary .ts-value {
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    /* --- Step 1: XML Textarea --- */
+    .xml-input-area {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .tour-body-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: var(--text-dim);
+        margin-bottom: 8px;
+    }
+    .xml-input-area textarea {
+        width: 100%;
+        height: 360px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        padding: 14px;
+        resize: vertical;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .xml-input-area textarea:focus { border-color: var(--accent); }
+    .xml-input-area textarea::placeholder { color: var(--text-dim); }
+
+    /* --- Step 1: Validation Checklist (horizontal) --- */
+    .validation-list {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 20px;
+    }
+    .validation-card {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        transition: background 0.2s, border-color 0.2s;
+        white-space: nowrap;
+    }
+    .validation-card.pass { border-color: rgba(81,207,102,0.3); background: rgba(81,207,102,0.06); }
+    .validation-card.fail { border-color: rgba(255,107,107,0.3); background: rgba(255,107,107,0.06); }
+    .validation-card .v-icon { font-size: 14px; flex-shrink: 0; }
+    .validation-card .v-body { flex: 1; min-width: 0; }
+    .validation-card .v-title { font-weight: 600; font-size: 12px; }
+    .validation-card .v-detail { font-size: 11px; color: var(--text-dim); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; }
+    .validation-card.fail .v-detail { color: var(--error); }
+
+    /* --- Geocode Fallback Manual Input --- */
+    .manual-coord-input {
+        display: none;
+        margin-top: 12px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+    .manual-coord-input.visible { display: block; }
+    .manual-coord-input label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 4px; }
+    .manual-coord-input input {
+        width: 140px;
+        padding: 6px 10px;
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        margin-right: 8px;
+        outline: none;
+    }
+    .manual-coord-input input:focus { border-color: var(--accent); }
+
+    /* --- Buttons --- */
+    .btn {
+        padding: 9px 22px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: var(--font-body);
+        cursor: pointer;
+        border: none;
+        transition: opacity 0.15s, background 0.15s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #3d7ae6; }
+    .btn-success { background: var(--success); color: #111; }
+    .btn-success:hover:not(:disabled) { background: #47b85a; }
+    .btn-danger {
+        background: transparent;
+        color: var(--error);
+        border: 1px solid rgba(255,107,107,0.4);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(255,107,107,0.1); }
+    .btn-secondary {
+        background: var(--surface-alt);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--border); }
+    .btn-row { display: flex; gap: 10px; align-items: center; margin-top: 20px; }
+
+    /* --- Step 2: Vehicle Tables --- */
+    .panel-section {
+        margin-bottom: 28px;
+    }
+    .panel-section h3 {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: var(--text-dim);
+        margin-bottom: 12px;
+    }
+    .vehicle-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    .vehicle-table th {
+        text-align: left;
+        padding: 10px 14px;
+        background: var(--surface-alt);
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--text-dim);
+    }
+    .vehicle-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+    }
+    .vehicle-table tr:nth-child(even) td { background: var(--surface); }
+    .vehicle-table tr:nth-child(odd) td { background: var(--surface-alt); }
+    .vehicle-table .action-cell { text-align: right; }
+    .empty-state {
+        padding: 20px;
+        text-align: center;
+        color: var(--text-dim);
+        font-size: 13px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+    .instruction-banner {
+        display: none;
+        padding: 14px 18px;
+        background: rgba(79,140,255,0.08);
+        border: 1px solid rgba(79,140,255,0.3);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 13px;
+        margin-top: 16px;
+        line-height: 1.6;
+    }
+    .instruction-banner.visible { display: block; }
+
+    /* --- Step 3: Map Layout --- */
+    .step3-layout {
+        display: none;
+        flex: 1;
+        overflow: hidden;
+    }
+    .step3-layout.active {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+    }
+    .step3-sidebar {
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .step3-sidebar h2 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+    .step3-sidebar .step-desc {
+        color: var(--text-dim);
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+    #map {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* --- Stop Cards --- */
+    .stop-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        position: relative;
+    }
+    .stop-card .stop-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        border: 2px solid rgba(255,255,255,0.3);
+    }
+    .stop-card .stop-info { flex: 1; }
+    .stop-card .stop-label { font-weight: 600; font-size: 12px; }
+    .stop-card .stop-coords {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-dim);
+    }
+    .stop-card .stop-remove {
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        background: transparent;
+        border: none;
+        color: var(--text-dim);
+        font-size: 14px;
+        transition: background 0.15s, color 0.15s;
+    }
+    .stop-card .stop-remove:hover { background: rgba(255,107,107,0.15); color: var(--error); }
+    .stop-card.locked { border-style: dashed; }
+    .stop-card.empty { opacity: 0.4; border-style: dashed; }
+
+    /* --- Instruction Badge --- */
+    .instruction-badge {
+        display: none;
+        padding: 10px 16px;
+        background: rgba(79,140,255,0.1);
+        border: 1px solid rgba(79,140,255,0.3);
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--accent);
+        animation: pulse-badge 2s ease-in-out infinite;
+    }
+    .instruction-badge.visible { display: block; }
+    @keyframes pulse-badge {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+
+    /* --- JSON Preview --- */
+    .json-preview {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 14px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-dim);
+        white-space: pre;
+        overflow-x: auto;
+        max-height: 260px;
+        overflow-y: auto;
+        line-height: 1.6;
+    }
+    .json-preview .json-key { color: var(--accent); }
+    .json-preview .json-num { color: var(--warning); }
+    .json-preview .json-str { color: var(--success); }
+
+    /* --- Custom Leaflet Markers --- */
+    .stop-marker {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+        position: relative;
+    }
+    .stop-marker.locked {
+        border-style: double;
+        border-width: 4px;
+    }
+    .stop-marker-label {
+        position: absolute;
+        top: -24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        font-size: 10px;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 3px;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    /* --- Step 4: Status Container & Card --- */
+    #status-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    #status-container:has(> .status-card:only-child) {
+        grid-template-columns: 1fr;
+    }
+    #status-container > .empty-state {
+        grid-column: 1 / -1;
+    }
+    .status-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px 24px;
+    }
+    .status-card .status-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+    }
+    .status-card .status-row:last-child { border-bottom: none; }
+    .status-card .status-label { color: var(--text-dim); }
+    .status-card .status-value { font-weight: 500; font-family: var(--font-mono); font-size: 12px; }
+    .status-card .status-highlight { color: var(--accent); font-weight: 600; }
+
+    /* --- Toast --- */
+    .toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-size: 13px;
+        color: var(--text);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        transform: translateY(100px);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        z-index: 10000;
+        max-width: 420px;
+    }
+    .toast.visible { transform: translateY(0); opacity: 1; }
+
+    /* --- Success / Error result cards --- */
+    .result-card {
+        display: none;
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-top: 16px;
+        font-size: 13px;
+    }
+    .result-card.visible { display: block; }
+    .result-card.result-success {
+        background: rgba(81,207,102,0.08);
+        border: 1px solid rgba(81,207,102,0.3);
+        color: var(--success);
+    }
+    .result-card.result-error {
+        background: rgba(255,107,107,0.08);
+        border: 1px solid rgba(255,107,107,0.3);
+        color: var(--error);
+    }
+    .result-card pre {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        margin-top: 6px;
+        white-space: pre-wrap;
+    }
+
+    /* --- Loading spinner --- */
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- Section label style --- */
+    .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: var(--text-dim);
+        margin-bottom: 10px;
+    }
+
+    /* --- Pagination --- */
+    .pagination {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 12px;
+    }
+    .pagination button {
+        min-width: 34px;
+        height: 34px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--surface-alt);
+        color: var(--text-dim);
+        font-size: 13px;
+        font-family: var(--font-body);
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+        padding: 0 8px;
+    }
+    .pagination button:hover:not(:disabled) { background: var(--border); color: var(--text); }
+    .pagination button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
+    .pagination .page-info {
+        font-size: 12px;
+        color: var(--text-dim);
+        margin-left: 10px;
+    }
+    </style>
+</head>
+<body>
+
+<div id="app">
+
+    <!-- ======== Top Navigation ======== -->
+    <nav class="topbar">
+        <div class="topbar-left">
+            <span class="app-title">ACC RTV Tour Tester</span>
+            <span id="transport-badge" class="transport-badge"></span>
+        </div>
+        <div class="topbar-tabs"></div>
+        <div class="topbar-right"></div>
+    </nav>
+
+    <!-- ======== Main Content ======== -->
+    <div class="main-content">
+
+        <!-- ---- Wizard View ---- -->
+        <div id="wizard-view" class="view active">
+
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step-pill active" data-step="0" onclick="goToStep(0)">
+                    <span class="step-num">?</span> Guide
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-pill" data-step="1" onclick="goToStep(1)">
+                    <span class="step-num">1</span> Validate
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-pill" data-step="2" onclick="goToStep(2)">
+                    <span class="step-num">2</span> Vehicles
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-pill" data-step="3" onclick="goToStep(3)">
+                    <span class="step-num">3</span> Tour Map
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-pill" data-step="4" onclick="goToStep(4)">
+                    <span class="step-num">4</span> Status
+                </div>
+            </div>
+
+            <!-- Step 0: Instructions -->
+            <div id="step-0" class="step-content active">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                    <h2 style="margin-bottom:0;">Welcome to ACC RTV Tour Tester</h2>
+                    <button class="btn btn-primary" onclick="goToStep(1)">Get Started</button>
+                </div>
+                <p class="step-desc">Create and test RTV tours in 4 simple steps.</p>
+
+                <div class="instr-flow">
+                    <div class="instr-flow-step"><span>&#128203;</span>Validate</div>
+                    <div class="flow-arrow">&#8594;</div>
+                    <div class="instr-flow-step"><span>&#128666;</span>Vehicle</div>
+                    <div class="flow-arrow">&#8594;</div>
+                    <div class="instr-flow-step"><span>&#128506;</span>Tour Map</div>
+                    <div class="flow-arrow">&#8594;</div>
+                    <div class="instr-flow-step"><span>&#128225;</span>Status</div>
+                </div>
+
+                <div class="instructions-grid">
+                    <div class="instr-card">
+                        <div class="instr-step-num c1">1</div>
+                        <h3>Validate Transport</h3>
+                        <ul>
+                            <li>Paste transport XML into the Tour Body field</li>
+                            <li>Click <strong>Validate</strong> to run 5 checks</li>
+                            <li>RTV enabled, carrier 313520, loading station, dates</li>
+                            <li>All checks must be green to proceed</li>
+                            <li>Fix issues in TPW if any check fails</li>
+                        </ul>
+                        <span class="instr-tag tag-blue">XML + Validation</span>
+                    </div>
+
+                    <div class="instr-card">
+                        <div class="instr-step-num c2">2</div>
+                        <h3>Select Vehicle</h3>
+                        <ul>
+                            <li>View occupied and available vehicles</li>
+                            <li>Delete active tours to free vehicles if needed</li>
+                            <li>Click <strong>Select</strong> on an available vehicle</li>
+                            <li>License plate is auto-copied to clipboard</li>
+                            <li>Go to TPW &rarr; Allocate &rarr; paste license plate</li>
+                        </ul>
+                        <span class="instr-tag tag-purple">TPW Allocation</span>
+                    </div>
+
+                    <div class="instr-card">
+                        <div class="instr-step-num c3">3</div>
+                        <h3>Build Tour on Map</h3>
+                        <ul>
+                            <li>Loading &amp; unloading stations are auto-placed</li>
+                            <li>Click the map to place 4 additional stops</li>
+                            <li>Approach loading &rarr; Depart loading &rarr; Approach unloading &rarr; Depart unloading</li>
+                            <li>Use <strong>x</strong> to remove and re-place stops</li>
+                            <li>Click <strong>Create Tour</strong> to submit</li>
+                        </ul>
+                        <span class="instr-tag tag-yellow">6 Stops Total</span>
+                    </div>
+
+                    <div class="instr-card">
+                        <div class="instr-step-num c4">4</div>
+                        <h3>Verify Status</h3>
+                        <ul>
+                            <li>Click <strong>Current Status</strong> to check tracking</li>
+                            <li>View position, ETA, speed, fuel and more</li>
+                            <li>Tracking may take a few minutes to start</li>
+                            <li>Use <strong>Delete Tour</strong> when testing is done</li>
+                        </ul>
+                        <span class="instr-tag tag-green">Live Tracking</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 1: Parse & Validate -->
+            <div id="step-1" class="step-content">
+                <h2>Parse & Validate Transport XML</h2>
+                <p class="step-desc">Paste the full transport tour body XML below. The app will validate RTV configuration and extract route data.</p>
+
+                <div id="transport-summary" class="transport-summary">
+                    <div class="ts-row" id="ts-row"></div>
+                </div>
+
+                <div id="validation-list" class="validation-list"></div>
+
+                <div class="xml-input-area">
+                    <label class="tour-body-label">Tour Body</label>
+                    <textarea id="xml-input" placeholder="Paste transport XML here..." style="height:360px;"></textarea>
+                </div>
+
+                <div class="btn-row" style="margin-bottom: 20px;">
+                    <button class="btn btn-primary" onclick="validateTransport()">Validate</button>
+                </div>
+
+                <div id="manual-coord-loading" class="manual-coord-input">
+                    <p class="section-label">Manual Coordinates — Loading Station</p>
+                    <label>Latitude</label>
+                    <input type="text" id="manual-load-lat" placeholder="e.g. 49.29026">
+                    <label>Longitude</label>
+                    <input type="text" id="manual-load-lng" placeholder="e.g. 8.46789">
+                    <button class="btn btn-secondary" style="margin-top:8px" onclick="applyManualCoords('loading')">Apply</button>
+                </div>
+
+                <div id="manual-coord-unloading" class="manual-coord-input">
+                    <p class="section-label">Manual Coordinates — Unloading Station</p>
+                    <label>Latitude</label>
+                    <input type="text" id="manual-unload-lat" placeholder="e.g. 49.87145">
+                    <label>Longitude</label>
+                    <input type="text" id="manual-unload-lng" placeholder="e.g. 8.91639">
+                    <button class="btn btn-secondary" style="margin-top:8px" onclick="applyManualCoords('unloading')">Apply</button>
+                </div>
+
+                <div class="btn-row">
+                    <button id="btn-to-step2" class="btn btn-success" disabled onclick="goToStep(2)">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Vehicle Selection -->
+            <div id="step-2" class="step-content">
+                <h2>Vehicle Selection</h2>
+                <p class="step-desc">Review occupied and available vehicles. Free up a vehicle if needed, then select one to use for this tour.</p>
+
+                <div id="vehicle-instruction" class="instruction-banner"></div>
+
+                <div class="btn-row" id="step2-top-nav" style="margin-bottom:20px;">
+                    <button class="btn btn-secondary" onclick="goToStep(1)">Back</button>
+                    <button id="btn-to-step3-top" class="btn btn-success" disabled onclick="goToStep(3)">Next</button>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Occupied Vehicles</h3>
+                    <div id="occupied-table-container"></div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Available Vehicles</h3>
+                    <div id="available-table-container"></div>
+                    <div id="avail-pagination" class="pagination"></div>
+                </div>
+
+            </div>
+
+            <!-- Step 3: Tour Creation (uses special grid layout, not step-content) -->
+            <div id="step-3" class="step3-layout">
+                <div class="step3-sidebar">
+                    <h2>Tour Creation</h2>
+                    <p class="step-desc">Place 4 stops around the loading and unloading stations on the map.</p>
+
+                    <div id="instruction-badge" class="instruction-badge"></div>
+                    <div id="stop-cards-container"></div>
+
+                    <p class="section-label" style="margin-top:16px">JSON Payload</p>
+                    <div id="json-preview" class="json-preview">Waiting for stops...</div>
+
+                    <div class="btn-row" style="margin-top:auto; padding-top:16px;">
+                        <button class="btn btn-secondary" onclick="goToStep(2)">Back</button>
+                        <button id="btn-create-tour" class="btn btn-primary" disabled onclick="submitTour()">Create Tour</button>
+                        <button id="btn-to-step4" class="btn btn-success" disabled onclick="goToStep(4)">Next</button>
+                    </div>
+
+                    <div id="tour-result" class="result-card"></div>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <!-- Step 4: Status Monitor -->
+            <div id="step-4" class="step-content">
+                <h2>Verify Tracking Status</h2>
+                <p class="step-desc">Check if tracking is active for the selected vehicle. Press the button below to fetch the latest status.</p>
+
+                <div id="status-vehicle-info" style="font-size:13px; color:var(--text-dim); margin-bottom:16px;"></div>
+
+                <div class="btn-row" style="margin-bottom:20px;">
+                    <button class="btn btn-secondary" onclick="goToStep(3)">Back</button>
+                    <button class="btn btn-primary" onclick="checkVehicleStatus()">Current Status</button>
+                </div>
+
+                <div id="status-container"></div>
+            </div>
+
+        </div><!-- /wizard-view -->
+
+    </div><!-- /main-content -->
+
+    <!-- ======== Toast ======== -->
+    <div id="toast" class="toast"></div>
+
+</div><!-- /app -->
+
+<script>
+/* =============================================================
+   JavaScript — ACC RTV Tour Tester
+   ============================================================= */
+
+// ── Configuration ────────────────────────────────────────────
+const API_BASE = '/api';  // same origin (proxy adds API auth from env)
+const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/search';
+const REQUIRED_CARRIER = '313520';
+
+const STOP_COLORS = ['#ff6b6b','#4f8cff','#ffd43b','#ff922b','#22b8cf','#51cf66'];
+const STOP_LABELS = [
+    'Approach to loading',
+    'Loading station',
+    'Depart loading',
+    'Approach to unloading',
+    'Unloading station',
+    'Depart unloading'
+];
+
+// ── Application State ────────────────────────────────────────
+const appState = {
+    transportNumber: null,
+    companyName: null,
+    routeSummary: null,
+    stop2: null,
+    stop5: null,
+    loadingDateTime: null,
+    vehicleId: null,
+    licensePlate: null,
+    stops: [null, null, null, null, null, null],
+    currentStep: 0,
+    currentView: 'wizard',
+    step0Complete: false,
+    step1Complete: false,
+    step2Complete: false,
+    step3Complete: false,
+    step4Complete: false,
+    mapInitialized: false,
+    placementIndex: null,
+    markers: [null, null, null, null, null, null],
+    polyline: null
+};
+
+let leafletMap = null;
+
+// ── View & Step Navigation ───────────────────────────────────
+
+
+function goToStep(n) {
+    if (n === 2 && !appState.step1Complete) return;
+    if (n === 3 && !appState.step2Complete) return;
+    if (n === 4 && !appState.step3Complete) return;
+
+    appState.currentStep = n;
+
+    document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+    document.getElementById('step-3').classList.remove('active');
+
+    if (n === 3) {
+        document.getElementById('step-3').classList.add('active');
+        if (!appState.mapInitialized) initMap();
+        else leafletMap.invalidateSize();
+    } else {
+        document.getElementById('step-' + n).classList.add('active');
+    }
+
+    updateStepIndicator();
+
+    if (n === 2 && !document.querySelector('#occupied-table-container table')) {
+        loadVehicles();
+    }
+    if (n === 4) updateStatusVehicleInfo();
+    if (n >= 1) appState.step0Complete = true;
+}
+
+function updateStepIndicator() {
+    document.querySelectorAll('.step-pill').forEach(pill => {
+        const s = parseInt(pill.dataset.step);
+        pill.classList.remove('active', 'completed');
+        const isComplete = (s === 0 && appState.step0Complete) || (s === 1 && appState.step1Complete) || (s === 2 && appState.step2Complete) || (s === 3 && appState.step3Complete) || (s === 4 && appState.step4Complete);
+        if (isComplete) {
+            pill.classList.add('completed');
+        } else if (s === appState.currentStep) {
+            pill.classList.add('active');
+        }
+    });
+}
+
+function updateTransportBadge() {
+    const badge = document.getElementById('transport-badge');
+    if (appState.transportNumber) {
+        badge.textContent = appState.transportNumber + ' — ' + (appState.routeSummary || '');
+        badge.classList.add('visible');
+    } else {
+        badge.classList.remove('visible');
+    }
+}
+
+// ── Utility Functions ────────────────────────────────────────
+
+function showToast(message, duration = 4000) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), duration);
+}
+
+function formatDateTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function roundCoord(n) {
+    return Math.round(n * 100000) / 100000;
+}
+
+async function apiCall(method, path, body = null) {
+    const opts = {
+        method,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    let resp;
+    try {
+        resp = await fetch(API_BASE + path, opts);
+    } catch (netErr) {
+        if (netErr instanceof TypeError && netErr.message.includes('Failed to fetch')) {
+            throw { status: 0, data: 'API request blocked by browser security (CORS) or proxy unreachable. Ensure proxy.js is running on port 3001.' };
+        }
+        throw { status: 0, data: 'Network error: ' + netErr.message };
+    }
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
+    if (!resp.ok) throw { status: resp.status, data };
+    return data;
+}
+
+// ── Step 1: Parse & Validate ─────────────────────────────────
+
+async function validateTransport() {
+    const xmlStr = document.getElementById('xml-input').value.trim();
+    if (!xmlStr) { showToast('Please paste transport XML first.'); return; }
+
+    appState.step1Complete = false;
+    document.getElementById('btn-to-step2').disabled = true;
+    document.getElementById('manual-coord-loading').classList.remove('visible');
+    document.getElementById('manual-coord-unloading').classList.remove('visible');
+
+    const listEl = document.getElementById('validation-list');
+    const checks = [
+        { id: 'rtv', title: 'RTV Enabled' },
+        { id: 'carrier', title: 'Carrier 313520 Assigned' },
+        { id: 'loading', title: 'Loading Station Found' },
+        { id: 'window', title: 'Loading Window Active' },
+        { id: 'unloading', title: 'Last Unloading in Future' }
+    ];
+    listEl.innerHTML = checks.map(c =>
+        `<div class="validation-card" id="vc-${c.id}">
+            <span class="v-icon">&#9203;</span>
+            <div class="v-body"><div class="v-title">${c.title}</div><div class="v-detail">Checking...</div></div>
+        </div>`
+    ).join('');
+
+    let doc;
+    try {
+        const parser = new DOMParser();
+        doc = parser.parseFromString(xmlStr, 'application/xml');
+        const parseError = doc.querySelector('parsererror');
+        if (parseError) throw new Error(parseError.textContent.substring(0, 200));
+    } catch (e) {
+        listEl.innerHTML = `<div class="validation-card fail">
+            <span class="v-icon">&#10060;</span>
+            <div class="v-body"><div class="v-title">XML Parse Error</div>
+            <div class="v-detail">${escapeHtml(e.message)}</div></div></div>`;
+        return;
+    }
+
+    const results = {};
+    let allPassed = true;
+
+    // V1: RTV Enabled
+    try {
+        const params = doc.querySelectorAll('tour > parameters > parameter');
+        let rtvValue = null;
+        params.forEach(p => {
+            const q = p.querySelector('qualifier');
+            if (q && q.textContent.trim() === 'visibility.product') {
+                rtvValue = p.querySelector('value')?.textContent.trim() || '';
+            }
+        });
+        if (rtvValue && rtvValue.toLowerCase().includes('rtv')) {
+            setCheck('rtv', true, 'RTV enabled');
+        } else {
+            setCheck('rtv', false, 'Transport is not RTV-enabled. Enable RTV in the transport configuration.');
+            allPassed = false;
+        }
+    } catch { setCheck('rtv', false, 'Could not check RTV parameter.'); allPassed = false; }
+
+    // V2: Carrier 313520 Assigned
+    try {
+        const carrierId = doc.querySelector('tour > assigned_carrier_id')?.textContent.trim();
+        if (carrierId === REQUIRED_CARRIER) {
+            setCheck('carrier', true, `Carrier ${REQUIRED_CARRIER} (Demo_carrier fleetcon)`);
+        } else {
+            setCheck('carrier', false, `Transport not allocated to ${REQUIRED_CARRIER}. Current carrier: ${carrierId || 'unknown'}. Reassign in TPW.`);
+            allPassed = false;
+        }
+    } catch { setCheck('carrier', false, 'Could not read carrier ID.'); allPassed = false; }
+
+    // V3: Loading Station Found
+    let loadingStation = null;
+    try {
+        loadingStation = findFirstLoadingStation(doc);
+        if (loadingStation) {
+            const compName = getChildText(loadingStation, 'company_name');
+            const city = getChildText(loadingStation, 'city');
+            setCheck('loading', true, `Loading: ${compName}, ${city}`);
+        } else {
+            setCheck('loading', false, 'No loading station found in transport XML.');
+            allPassed = false;
+        }
+    } catch { setCheck('loading', false, 'Error reading loading station.'); allPassed = false; }
+
+    // V4: Loading Window Active
+    if (loadingStation) {
+        try {
+            const fromDate = getChildText(loadingStation, 'from_date');
+            const fromTime = getChildText(loadingStation, 'from_time') || '00:00';
+            const untilDate = getChildText(loadingStation, 'until_date');
+            const untilTime = getChildText(loadingStation, 'until_time') || '00:00';
+            const tz = getChildText(loadingStation, 'timezone') || 'Europe/Berlin';
+
+            const now = new Date();
+            const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+            if (untilDate === todayStr && untilTime > nowTimeStr) {
+                const from = parseDateInTz(fromDate, fromTime, tz);
+                const until = parseDateInTz(untilDate, untilTime, tz);
+                setCheck('window', true, `Loading window: ${formatDateTime(new Date(from).toISOString())} — ${formatDateTime(new Date(until).toISOString())}`);
+            } else {
+                setCheck('window', false, `Loading time window is not active. Update transport dates in TPW. Current window: ${fromDate} ${fromTime} — ${untilDate} ${untilTime}`);
+                allPassed = false;
+            }
+
+            const from = parseDateInTz(fromDate, fromTime, tz);
+            appState.loadingDateTime = new Date(from).toISOString();
+        } catch (e) {
+            setCheck('window', false, 'Error checking loading window: ' + e.message);
+            allPassed = false;
+        }
+    } else {
+        setCheck('window', false, 'Skipped — no loading station found.');
+        allPassed = false;
+    }
+
+    // V5: Last Unloading in Future
+    let unloadingStation = null;
+    try {
+        unloadingStation = findLastUnloadingStation(doc);
+        if (unloadingStation) {
+            const fromDate = getChildText(unloadingStation, 'from_date');
+            const fromTime = getChildText(unloadingStation, 'from_time') || '00:00';
+            const tz = getChildText(unloadingStation, 'timezone') || 'Europe/Berlin';
+            const compName = getChildText(unloadingStation, 'company_name');
+            const city = getChildText(unloadingStation, 'city');
+            const unloadTs = parseDateInTz(fromDate, fromTime, tz);
+
+            if (unloadTs > Date.now()) {
+                setCheck('unloading', true, `Last unloading: ${fromDate} at ${compName}, ${city}`);
+            } else {
+                setCheck('unloading', false, `Last unloading date is in the past. Update transport dates in TPW.`);
+                allPassed = false;
+            }
+        } else {
+            setCheck('unloading', false, 'No unloading station found in transport XML.');
+            allPassed = false;
+        }
+    } catch { setCheck('unloading', false, 'Error reading unloading station.'); allPassed = false; }
+
+    // Extract transport metadata
+    appState.transportNumber = doc.querySelector('tour > number')?.textContent.trim() || null;
+    appState.companyName = doc.querySelector('tour > company_name')?.textContent.trim() || null;
+    const startCity = doc.querySelector('tour > start_city')?.textContent.trim() || '?';
+    const endCity = doc.querySelector('tour > end_city')?.textContent.trim() || '?';
+    appState.routeSummary = startCity + ' → ' + endCity;
+
+    renderTransportSummary();
+    updateTransportBadge();
+
+    // Extract coordinates
+    if (allPassed && loadingStation && unloadingStation) {
+        const stop2 = await extractCoordinates(loadingStation, 'loading');
+        const stop5 = await extractCoordinates(unloadingStation, 'unloading');
+
+        if (stop2) {
+            const compName = getChildText(loadingStation, 'company_name');
+            const city = getChildText(loadingStation, 'city');
+            appState.stop2 = { lat: stop2.lat, lng: stop2.lng, label: compName + ', ' + city };
+        }
+        if (stop5) {
+            const compName = getChildText(unloadingStation, 'company_name');
+            const city = getChildText(unloadingStation, 'city');
+            appState.stop5 = { lat: stop5.lat, lng: stop5.lng, label: compName + ', ' + city };
+        }
+
+        if (appState.stop2 && appState.stop5) {
+            appState.step1Complete = true;
+            document.getElementById('btn-to-step2').disabled = false;
+        } else {
+            if (!appState.stop2) document.getElementById('manual-coord-loading').classList.add('visible');
+            if (!appState.stop5) document.getElementById('manual-coord-unloading').classList.add('visible');
+        }
+    }
+}
+
+function setCheck(id, pass, detail) {
+    const card = document.getElementById('vc-' + id);
+    if (!card) return;
+    card.className = 'validation-card ' + (pass ? 'pass' : 'fail');
+    card.querySelector('.v-icon').innerHTML = pass ? '&#9989;' : '&#10060;';
+    card.querySelector('.v-detail').textContent = detail;
+}
+
+function findFirstLoadingStation(doc) {
+    const shipments = Array.from(doc.querySelectorAll('shipment'));
+    for (const s of shipments) {
+        const station = s.querySelector('station[type="loading"]');
+        if (station) return station;
+    }
+    return null;
+}
+
+function findLastUnloadingStation(doc) {
+    const shipments = Array.from(doc.querySelectorAll('shipment'));
+    if (!shipments.length) return null;
+    shipments.sort((a, b) => {
+        const ai = parseInt(a.getAttribute('index') || '0');
+        const bi = parseInt(b.getAttribute('index') || '0');
+        return bi - ai;
+    });
+    return shipments[0].querySelector('station[type="unloading"]') || null;
+}
+
+function getChildText(el, tag) {
+    const child = el.querySelector(':scope > ' + tag) || el.querySelector(tag);
+    return child ? child.textContent.trim() : '';
+}
+
+function parseDateInTz(dateStr, timeStr, tz) {
+    // Build a Date interpreted in the given timezone.
+    // Strategy: create a UTC date from the components, then compute the offset
+    // for that timezone and adjust.
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hour, minute] = timeStr.split(':').map(Number);
+
+    // Create a candidate date in UTC
+    const utcCandidate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+
+    // Find the UTC offset for this timezone at this moment
+    // by comparing the local representation back to UTC
+    const localStr = utcCandidate.toLocaleString('en-US', { timeZone: tz });
+    const localDate = new Date(localStr);
+    const offsetMs = utcCandidate.getTime() - localDate.getTime();
+
+    // The actual UTC timestamp for "year-month-day hour:minute in tz"
+    return utcCandidate.getTime() + offsetMs;
+}
+
+async function extractCoordinates(station, type) {
+    const lat = parseFloat(getChildText(station, 'latitude'));
+    const lng = parseFloat(getChildText(station, 'longitude'));
+    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        return { lat: roundCoord(lat), lng: roundCoord(lng) };
+    }
+    const address = getChildText(station, 'address');
+    const zip = getChildText(station, 'zip');
+    const city = getChildText(station, 'city');
+    const country = getChildText(station, 'country_id');
+    return geocodeAddress(address, zip, city, country, type);
+}
+
+async function geocodeAddress(address, zip, city, country, type) {
+    const q = [address, zip + ' ' + city, country].filter(Boolean).join(', ');
+    try {
+        const url = `${NOMINATIM_BASE}?format=json&q=${encodeURIComponent(q)}&limit=1`;
+        const resp = await fetch(url, { headers: { 'User-Agent': 'RTV-Tour-Builder/1.0' } });
+        const data = await resp.json();
+        if (data.length > 0) {
+            return { lat: roundCoord(parseFloat(data[0].lat)), lng: roundCoord(parseFloat(data[0].lon)) };
+        }
+    } catch (e) {
+        console.warn('Geocoding failed:', e);
+    }
+    showToast(`Could not geocode ${type} station address. Enter coordinates manually.`, 6000);
+    return null;
+}
+
+function applyManualCoords(type) {
+    if (type === 'loading') {
+        const lat = parseFloat(document.getElementById('manual-load-lat').value);
+        const lng = parseFloat(document.getElementById('manual-load-lng').value);
+        if (isNaN(lat) || isNaN(lng)) { showToast('Enter valid numeric coordinates.'); return; }
+        appState.stop2 = { lat: roundCoord(lat), lng: roundCoord(lng), label: 'Manual loading coords' };
+        document.getElementById('manual-coord-loading').classList.remove('visible');
+    } else {
+        const lat = parseFloat(document.getElementById('manual-unload-lat').value);
+        const lng = parseFloat(document.getElementById('manual-unload-lng').value);
+        if (isNaN(lat) || isNaN(lng)) { showToast('Enter valid numeric coordinates.'); return; }
+        appState.stop5 = { lat: roundCoord(lat), lng: roundCoord(lng), label: 'Manual unloading coords' };
+        document.getElementById('manual-coord-unloading').classList.remove('visible');
+    }
+    if (appState.stop2 && appState.stop5) {
+        appState.step1Complete = true;
+        document.getElementById('btn-to-step2').disabled = false;
+        showToast('Coordinates applied. You can proceed.');
+    }
+}
+
+function renderTransportSummary() {
+    const container = document.getElementById('transport-summary');
+    const row = document.getElementById('ts-row');
+    if (!appState.transportNumber) { container.classList.remove('visible'); return; }
+    container.classList.add('visible');
+    row.innerHTML = `
+        <div class="ts-item"><span class="ts-label">Transport</span><span class="ts-value">${escapeHtml(appState.transportNumber)}</span></div>
+        <div class="ts-item"><span class="ts-label">Company</span><span class="ts-value">${escapeHtml(appState.companyName || '—')}</span></div>
+        <div class="ts-item"><span class="ts-label">Route</span><span class="ts-value">${escapeHtml(appState.routeSummary || '—')}</span></div>
+    `;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ── Step 2: Vehicle Selection ────────────────────────────────
+
+let allVehicles = [];
+let occupiedVehicles = [];
+let availPage = 0;
+const AVAIL_PAGE_SIZE = 6;
+
+async function loadVehicles() {
+    const occContainer = document.getElementById('occupied-table-container');
+    const availContainer = document.getElementById('available-table-container');
+    occContainer.innerHTML = '<span class="spinner"></span> Loading...';
+    availContainer.innerHTML = '<span class="spinner"></span> Loading...';
+    document.getElementById('avail-pagination').innerHTML = '';
+
+    try {
+        const [occupied, allList] = await Promise.all([
+            apiCall('GET', '/v1/vehicle/status/current'),
+            apiCall('GET', '/v1/vehicle/list')
+        ]);
+        occupiedVehicles = Array.isArray(occupied) ? occupied : [];
+        allVehicles = Array.isArray(allList) ? allList : [];
+        availPage = 0;
+        renderVehicleTables();
+    } catch (e) {
+        const msg = e.status
+            ? `API error (${e.status}): ${typeof e.data === 'string' ? e.data : JSON.stringify(e.data)}`
+            : 'Cannot reach RTV Mock API. Check that the proxy is running on port 3001 and your network/VPN connection.';
+        occContainer.innerHTML = `<div class="empty-state" style="color:var(--error)">${escapeHtml(msg)}</div>`;
+        availContainer.innerHTML = '';
+    }
+}
+
+function getAvailableVehicles() {
+    const occupiedIds = new Set(occupiedVehicles.map(v => v.vehicle_id));
+    return allVehicles.filter(v => !occupiedIds.has(v.vehicle_id));
+}
+
+function renderVehicleTables() {
+    const occContainer = document.getElementById('occupied-table-container');
+    const availContainer = document.getElementById('available-table-container');
+
+    const occupiedIds = new Set(occupiedVehicles.map(v => v.vehicle_id));
+
+    if (occupiedVehicles.length === 0) {
+        occContainer.innerHTML = '<div class="empty-state">No vehicles currently occupied — all vehicles are available.</div>';
+    } else {
+        occContainer.innerHTML = `<table class="vehicle-table">
+            <thead><tr><th>Vehicle ID</th><th>License Plate</th><th class="action-cell">Action</th></tr></thead>
+            <tbody>${occupiedVehicles.map(v => `<tr>
+                <td>${v.vehicle_id}</td>
+                <td>${escapeHtml(v.license_plate || '—')}</td>
+                <td class="action-cell"><button class="btn btn-danger" onclick="deleteVehicleTour(${v.vehicle_id})">Delete</button></td>
+            </tr>`).join('')}</tbody></table>`;
+    }
+
+    renderAvailablePage();
+}
+
+function renderAvailablePage() {
+    const availContainer = document.getElementById('available-table-container');
+    const pagEl = document.getElementById('avail-pagination');
+
+    if (allVehicles.length === 0) {
+        availContainer.innerHTML = '<div class="empty-state">No vehicles registered. Contact the RTV team.</div>';
+        pagEl.innerHTML = '';
+        return;
+    }
+
+    const available = getAvailableVehicles();
+    if (available.length === 0) {
+        availContainer.innerHTML = '<div class="empty-state">No available vehicles. Free up an occupied vehicle first.</div>';
+        pagEl.innerHTML = '';
+        return;
+    }
+
+    const totalPages = Math.ceil(available.length / AVAIL_PAGE_SIZE);
+    if (availPage >= totalPages) availPage = totalPages - 1;
+    const start = availPage * AVAIL_PAGE_SIZE;
+    const pageItems = available.slice(start, start + AVAIL_PAGE_SIZE);
+
+    availContainer.innerHTML = `<table class="vehicle-table">
+        <thead><tr><th>Vehicle ID</th><th>License Plate</th><th class="action-cell">Action</th></tr></thead>
+        <tbody>${pageItems.map(v => `<tr>
+            <td>${v.vehicle_id}</td>
+            <td>${escapeHtml(v.license_plate || '—')}</td>
+            <td class="action-cell"><button class="btn btn-primary" onclick="selectVehicle(${v.vehicle_id}, '${escapeHtml(v.license_plate || '')}')">Select</button></td>
+        </tr>`).join('')}</tbody></table>`;
+
+    if (totalPages <= 1) { pagEl.innerHTML = ''; return; }
+
+    let pagHtml = `<button onclick="goAvailPage(0)" ${availPage === 0 ? 'disabled' : ''}>&laquo;</button>`;
+    pagHtml += `<button onclick="goAvailPage(${availPage - 1})" ${availPage === 0 ? 'disabled' : ''}>&lsaquo;</button>`;
+
+    const maxVisible = 5;
+    let startPage = Math.max(0, availPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible);
+    if (endPage - startPage < maxVisible) startPage = Math.max(0, endPage - maxVisible);
+
+    for (let p = startPage; p < endPage; p++) {
+        pagHtml += `<button onclick="goAvailPage(${p})" class="${p === availPage ? 'active' : ''}">${p + 1}</button>`;
+    }
+
+    pagHtml += `<button onclick="goAvailPage(${availPage + 1})" ${availPage >= totalPages - 1 ? 'disabled' : ''}>&rsaquo;</button>`;
+    pagHtml += `<button onclick="goAvailPage(${totalPages - 1})" ${availPage >= totalPages - 1 ? 'disabled' : ''}>&raquo;</button>`;
+    pagHtml += `<span class="page-info">${start + 1}–${Math.min(start + AVAIL_PAGE_SIZE, available.length)} of ${available.length}</span>`;
+
+    pagEl.innerHTML = pagHtml;
+}
+
+function goAvailPage(p) {
+    const available = getAvailableVehicles();
+    const totalPages = Math.ceil(available.length / AVAIL_PAGE_SIZE);
+    availPage = Math.max(0, Math.min(p, totalPages - 1));
+    renderAvailablePage();
+}
+
+async function deleteVehicleTour(vehicleId) {
+    try {
+        await apiCall('DELETE', '/v1/tours/' + vehicleId);
+        showToast('Vehicle ' + vehicleId + ' freed.');
+        await loadVehicles();
+    } catch (e) {
+        showToast('Error freeing vehicle: ' + (e.data || e.message || 'Unknown error'));
+    }
+}
+
+async function selectVehicle(vehicleId, licensePlate) {
+    try {
+        await navigator.clipboard.writeText(licensePlate);
+    } catch { /* clipboard may fail in non-HTTPS */ }
+
+    showToast(`${licensePlate} copied to clipboard — allocate this vehicle in TPW.`);
+
+    try {
+        await apiCall('DELETE', '/v1/tours/' + vehicleId);
+    } catch { /* cleanup, ignore errors */ }
+
+    appState.vehicleId = vehicleId;
+    appState.licensePlate = licensePlate;
+    appState.step2Complete = true;
+
+    const banner = document.getElementById('vehicle-instruction');
+    banner.innerHTML = `Go to TPW → Accepted Transports → Allocate → paste license plate <strong>${escapeHtml(licensePlate)}</strong>. Click <strong>"Next"</strong> when done.`;
+    banner.classList.add('visible');
+    document.getElementById('btn-to-step3-top').disabled = false;
+    updateStepIndicator();
+    document.getElementById('step-2').scrollTop = 0;
+}
+
+// ── Step 3: Tour Creation (Map) ──────────────────────────────
+
+function initMap() {
+    appState.stops[1] = appState.stop2;
+    appState.stops[4] = appState.stop5;
+
+    leafletMap = L.map('map', { zoomControl: true }).setView(
+        [appState.stop2.lat, appState.stop2.lng], 14
+    );
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(leafletMap);
+
+    placeLockedMarker(1, appState.stop2, STOP_COLORS[1], STOP_LABELS[1]);
+    placeLockedMarker(4, appState.stop5, STOP_COLORS[4], STOP_LABELS[4]);
+
+    appState.placementIndex = 0;
+    updateInstructionBadge();
+    renderStopCards();
+    updateJsonPreview();
+
+    leafletMap.on('click', onMapClick);
+    appState.mapInitialized = true;
+
+    setTimeout(() => leafletMap.invalidateSize(), 100);
+}
+
+function placeLockedMarker(index, coords, color, label) {
+    const icon = L.divIcon({
+        className: '',
+        html: `<div class="stop-marker locked" style="background:${color};">
+                 <div class="stop-marker-label">${index + 1}. ${label}</div>
+               </div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+    });
+    const marker = L.marker([coords.lat, coords.lng], { icon, draggable: false }).addTo(leafletMap);
+    appState.markers[index] = marker;
+}
+
+function getNextPlacementIndex() {
+    const order = [0, 2, 3, 5];
+    for (const i of order) {
+        if (!appState.stops[i]) return i;
+    }
+    return null;
+}
+
+function onMapClick(e) {
+    const idx = appState.placementIndex;
+    if (idx === null) return;
+
+    const coords = { lat: roundCoord(e.latlng.lat), lng: roundCoord(e.latlng.lng) };
+    appState.stops[idx] = coords;
+
+    if (appState.markers[idx]) {
+        leafletMap.removeLayer(appState.markers[idx]);
+    }
+
+    const color = STOP_COLORS[idx];
+    const label = STOP_LABELS[idx];
+    const icon = L.divIcon({
+        className: '',
+        html: `<div class="stop-marker" style="background:${color};">
+                 <div class="stop-marker-label">${idx + 1}. ${label}</div>
+               </div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+    });
+    const marker = L.marker([coords.lat, coords.lng], { icon, draggable: true }).addTo(leafletMap);
+    marker.on('drag', function(ev) {
+        appState.stops[idx] = { lat: roundCoord(ev.latlng.lat), lng: roundCoord(ev.latlng.lng) };
+        updatePolyline();
+        updateJsonPreview();
+        renderStopCards();
+    });
+    marker.on('dragend', function(ev) {
+        const ll = ev.target.getLatLng();
+        appState.stops[idx] = { lat: roundCoord(ll.lat), lng: roundCoord(ll.lng) };
+        updatePolyline();
+        updateJsonPreview();
+        renderStopCards();
+    });
+    appState.markers[idx] = marker;
+
+    const wasPhase1 = (idx === 0 || idx === 2);
+    appState.placementIndex = getNextPlacementIndex();
+
+    if (wasPhase1 && appState.placementIndex !== null && appState.placementIndex >= 3 && appState.stops[0] && appState.stops[2]) {
+        leafletMap.flyTo([appState.stop5.lat, appState.stop5.lng], 14, { duration: 1.2 });
+    }
+
+    updateInstructionBadge();
+    renderStopCards();
+    updatePolyline();
+    updateJsonPreview();
+
+    const allPlaced = appState.stops.every(s => s !== null);
+    document.getElementById('btn-create-tour').disabled = !allPlaced;
+}
+
+function updateInstructionBadge() {
+    const badge = document.getElementById('instruction-badge');
+    const idx = appState.placementIndex;
+    if (idx === null) {
+        badge.textContent = 'All stops placed! Review and create the tour.';
+        badge.classList.add('visible');
+        return;
+    }
+    badge.textContent = `Click the map to place Stop ${idx + 1} (${STOP_LABELS[idx]})`;
+    badge.classList.add('visible');
+}
+
+function renderStopCards() {
+    const container = document.getElementById('stop-cards-container');
+    container.innerHTML = appState.stops.map((stop, i) => {
+        const color = STOP_COLORS[i];
+        const label = STOP_LABELS[i];
+        const isLocked = (i === 1 || i === 4);
+        if (!stop) {
+            return `<div class="stop-card empty">
+                <div class="stop-dot" style="background:${color}"></div>
+                <div class="stop-info"><div class="stop-label">${i + 1}. ${label}</div>
+                <div class="stop-coords">Not placed</div></div></div>`;
+        }
+        const removeBtn = isLocked ? '' : `<button class="stop-remove" onclick="removeStop(${i})" title="Remove stop">&times;</button>`;
+        return `<div class="stop-card${isLocked ? ' locked' : ''}">
+            <div class="stop-dot" style="background:${color}"></div>
+            <div class="stop-info"><div class="stop-label">${i + 1}. ${label}</div>
+            <div class="stop-coords">${stop.lat.toFixed(5)}, ${stop.lng.toFixed(5)}</div></div>
+            ${removeBtn}</div>`;
+    }).join('');
+}
+
+function removeStop(index) {
+    if (index === 1 || index === 4) return;
+    appState.stops[index] = null;
+    if (appState.markers[index]) {
+        leafletMap.removeLayer(appState.markers[index]);
+        appState.markers[index] = null;
+    }
+    appState.placementIndex = getNextPlacementIndex();
+    updateInstructionBadge();
+    renderStopCards();
+    updatePolyline();
+    updateJsonPreview();
+    document.getElementById('btn-create-tour').disabled = true;
+}
+
+function updatePolyline() {
+    if (appState.polyline) leafletMap.removeLayer(appState.polyline);
+    const points = appState.stops.filter(s => s !== null).map(s => [s.lat, s.lng]);
+    if (points.length >= 2) {
+        appState.polyline = L.polyline(points, {
+            color: '#8b8fa6',
+            weight: 2,
+            dashArray: '8 6',
+            opacity: 0.6
+        }).addTo(leafletMap);
+    }
+}
+
+function updateJsonPreview() {
+    const preview = document.getElementById('json-preview');
+    const payload = buildTourPayload();
+    if (!payload) {
+        preview.textContent = 'Waiting for stops...';
+        return;
+    }
+    const json = JSON.stringify(payload, null, 4);
+    preview.innerHTML = syntaxHighlightJson(json);
+}
+
+function buildTourPayload() {
+    if (!appState.vehicleId) return null;
+    const stops = appState.stops.map(s => s ? { lat: s.lat, lng: s.lng } : { lat: null, lng: null });
+    return {
+        vehicle_id: appState.vehicleId,
+        tour: {
+            start_time: new Date().toISOString(), // must be UTC (ISO 8601)
+            stops
+        }
+    };
+}
+
+function syntaxHighlightJson(json) {
+    return json.replace(/("[\w_]+")\s*:/g, '<span class="json-key">$1</span>:')
+               .replace(/:\s*(".*?")/g, ': <span class="json-str">$1</span>')
+               .replace(/:\s*(-?\d+\.?\d*)/g, ': <span class="json-num">$1</span>')
+               .replace(/:\s*(null)/g, ': <span class="json-num">$1</span>');
+}
+
+async function submitTour() {
+    const resultEl = document.getElementById('tour-result');
+    resultEl.className = 'result-card';
+    resultEl.classList.remove('visible');
+
+    const allPlaced = appState.stops.every(s => s !== null);
+    if (!allPlaced) { showToast('Place all 6 stops first.'); return; }
+
+    const payload = {
+        vehicle_id: appState.vehicleId,
+        tour: {
+            start_time: new Date().toISOString(), // must be UTC (ISO 8601)
+            stops: appState.stops.map(s => ({ lat: s.lat, lng: s.lng }))
+        }
+    };
+
+    document.getElementById('btn-create-tour').disabled = true;
+    document.getElementById('btn-create-tour').textContent = 'Submitting...';
+
+    const btn = document.getElementById('btn-create-tour');
+    try {
+        await apiCall('POST', '/v1/tours', payload);
+        btn.className = 'btn btn-success';
+        btn.textContent = 'Tour Created ✓';
+        btn.disabled = true;
+        appState.step3Complete = true;
+        document.getElementById('btn-to-step4').disabled = false;
+        updateStepIndicator();
+        showToast('Tour created for vehicle ' + appState.vehicleId);
+    } catch (e) {
+        resultEl.className = 'result-card result-error visible';
+        const errMsg = e.status ? `HTTP ${e.status}` : 'Network error';
+        const errBody = typeof e.data === 'string' ? e.data : JSON.stringify(e.data, null, 2);
+        resultEl.innerHTML = `<strong>${errMsg}</strong><pre>${escapeHtml(errBody || 'Could not reach API. Check proxy and network.')}</pre>`;
+        btn.disabled = false;
+        btn.textContent = 'Create Tour';
+    }
+}
+
+// ── Step 4: Status Monitor ───────────────────────────────────
+
+function updateStatusVehicleInfo() {
+    const el = document.getElementById('status-vehicle-info');
+    if (appState.vehicleId) {
+        el.innerHTML = `Selected vehicle: <strong>${appState.vehicleId}</strong> (${escapeHtml(appState.licensePlate || '—')})`;
+    } else {
+        el.textContent = 'No vehicle selected yet. Complete Steps 1–2 in the Wizard first, or press "Current Status" to see all occupied vehicles.';
+    }
+}
+
+async function checkVehicleStatus() {
+    const container = document.getElementById('status-container');
+    container.innerHTML = '<span class="spinner"></span> Fetching status...';
+
+    try {
+        const data = await apiCall('GET', '/v1/vehicle/status/current');
+        const vehicles = Array.isArray(data) ? data : [];
+
+        if (appState.vehicleId) {
+            const entry = vehicles.find(v => v.vehicle_id === appState.vehicleId);
+            if (entry) {
+                renderStatusCard(container, entry);
+            } else {
+                container.innerHTML = `<div class="empty-state">No tracking data available yet for vehicle ${appState.vehicleId}. Tracking may take a few minutes to initialize.</div>`;
+            }
+        } else {
+            if (vehicles.length === 0) {
+                container.innerHTML = '<div class="empty-state">No vehicles currently tracked.</div>';
+            } else {
+                container.innerHTML = vehicles.map(v => buildStatusCardHtml(v)).join('');
+            }
+        }
+    } catch (e) {
+        const msg = e.status
+            ? `API error (${e.status}): ${typeof e.data === 'string' ? e.data : JSON.stringify(e.data)}`
+            : 'Cannot reach RTV Mock API. Check that the proxy is running on port 3001 and your network/VPN connection.';
+        container.innerHTML = `<div class="empty-state" style="color:var(--error)">${escapeHtml(msg)}</div>`;
+    }
+}
+
+function buildStatusCardHtml(v) {
+    const meta = v.metainfo || {};
+    const dest = meta.destination || {};
+
+    const rows = [
+        ['Vehicle ID', v.vehicle_id],
+        ['License Plate', v.license_plate || '—'],
+        ['Timestamp', formatDateTime(v.timestamp)],
+        ['Latitude', v.latitude != null ? v.latitude : '—'],
+        ['Longitude', v.longitude != null ? v.longitude : '—'],
+        ['ETA', dest.eta ? formatDateTime(dest.eta) : '—', true],
+        ['Destination Distance', dest.distance_km != null ? dest.distance_km + ' km' : '—', true],
+        ['Engine Running', meta.engine_running === true ? '&#9989;' : meta.engine_running === false ? '&#10060;' : '—'],
+        ['Speed', v.speed != null ? v.speed + ' km/h' : '—'],
+        ['Fuel Level', meta.fuel_level_pct != null ? meta.fuel_level_pct + '%' : '—'],
+        ['Total Weight', meta.total_weight_kg != null ? meta.total_weight_kg + ' kg' : '—'],
+        ['Odometer', meta.odometer_km != null ? meta.odometer_km + ' km' : '—']
+    ];
+
+    return `<div class="status-card">${rows.map(r =>
+        `<div class="status-row">
+            <span class="status-label">${r[0]}</span>
+            <span class="status-value${r[2] ? ' status-highlight' : ''}">${r[1]}</span>
+        </div>`
+    ).join('')}<div style="padding-top:12px; text-align:right;">
+        <button class="btn btn-danger" onclick="deleteStatusTour(${v.vehicle_id})">Delete Tour</button>
+    </div></div>`;
+}
+
+function renderStatusCard(container, v) {
+    container.innerHTML = buildStatusCardHtml(v);
+}
+
+async function deleteStatusTour(vehicleId) {
+    try {
+        await apiCall('DELETE', '/v1/tours/' + vehicleId);
+        showToast('Tour deleted for vehicle ' + vehicleId);
+        checkVehicleStatus();
+    } catch (e) {
+        showToast('Error deleting tour: ' + (e.data || e.message || 'Unknown error'));
+    }
+}
+
+</script>
+
+</body>
+</html>
