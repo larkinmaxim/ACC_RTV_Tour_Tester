@@ -9,7 +9,10 @@ The ACC RTV Tour Tester is a single-page web application that consolidates the e
 
 ## Quick Start
 
-1. **Clone the repository**
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/larkinmaxim/ACC_RTV_Tour_Tester.git
+   ```
 2. **Run** `Start-RTVTourBuilder.ps1`
 3. **Open the app:** [http://localhost:3110/index.html](http://localhost:3110/index.html)
 
