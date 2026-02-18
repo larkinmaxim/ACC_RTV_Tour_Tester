@@ -52,30 +52,11 @@ Review the visual instructions showing the 4-step workflow.
 ## Configuration
 
 The proxy forwards API requests to the Telemetry API:
-- **Target:** `https://telemetry.mock.sixfold.com` (configurable via `RTV_API_TARGET`)
+
 - **Auth:** Basic authentication — credentials are **not** in code; you enter them when running the start script or set `RTV_API_USERNAME` and `RTV_API_PASSWORD` when starting the container.
 
 ---
 
-## Troubleshooting
-
-### Container won't start
-```bash
-# Check if port 3001 is already in use
-podman ps
-netstat -an | grep 3001
-```
-
-### Can't reach API
-- Ensure VPN is connected
-- Check network connectivity to `telemetry.mock.sixfold.com`
-
-### Validation fails
-- Verify transport has RTV enabled in TPW
-- Check carrier ID is 313520
-- Ensure loading window dates are current
-
----
 
 ## Project Structure
 

@@ -16,7 +16,7 @@ When the script starts, it may prompt for RTV Mock API credentials; the app will
 
 - **PowerShell** (to run `Start-RTVTourBuilder.ps1`)
 - **VPN/Network** access to the RTV Mock API
-- **TPW** (Transport Planning Workbench) access
+- **TPW** Access
 - A valid **transport XML** from TPW
 
 ---
