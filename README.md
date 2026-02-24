@@ -17,7 +17,7 @@ The ACC RTV Tour Tester is a single-page web application that consolidates the e
    ```bash
    git clone https://github.com/larkinmaxim/ACC_RTV_Tour_Tester.git
    ```
-2. **Run** `Start-RTVTourBuilder.ps1`
+2. **Run** `Start-RTVTourBuilder.ps1` — builds the app image with Podman, may prompt for API credentials, then starts the container and serves the app on port 3110.
 3. **Open the app:** [http://localhost:3110/index.html](http://localhost:3110/index.html)
 
 ---
@@ -71,7 +71,7 @@ The proxy forwards API requests to the Telemetry API:
 .
 ├── index.html          # Main application (single-page app)
 ├── proxy.js            # Express proxy + static file server
-├── package.json        # Node.js dependencies
+├── package.json        # Dependencies (Bun)
 ├── Dockerfile          # Container build instructions
 └── Documentation/
     └── User-Guide.md   # Detailed user documentation
@@ -83,7 +83,7 @@ The proxy forwards API requests to the Telemetry API:
 
 - **Frontend:** Vanilla JavaScript, Leaflet.js for maps
 - **Backend:** Express.js proxy server
-- **Container:** Node.js 20 Alpine Linux
+- **Container:** Bun Alpine Linux
 - **Port:** 3110 (proxy + static files)
 
 ---

@@ -1,14 +1,14 @@
 # ACC RTV Tour Tester - Container Image
-FROM node:20-alpine
+FROM oven/bun:alpine
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json bun.lock* ./
 
 # Install dependencies
-RUN npm install --production
+RUN bun install --production
 
 # Copy application files
 COPY proxy.js index.html ./
@@ -17,4 +17,4 @@ COPY proxy.js index.html ./
 EXPOSE 3110
 
 # Start the application
-CMD ["node", "proxy.js"]
+CMD ["bun", "run", "proxy.js"]
